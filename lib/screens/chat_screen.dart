@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ChatScreen extends StatefulWidget {
   @override
@@ -7,59 +9,56 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final List<String> _messages = [];
-  final List<List<String>> _chatHistory = [];
+  final List<Map<String, String>> _messages = [];
 
-  void _sendMessage() {
-    if (_controller.text.isNotEmpty) {
+  void _sendMessage() async {
+    if (_controller.text.isEmpty) return;
+
+    String userMessage = _controller.text;
+
+    setState(() {
+      _messages.add({"role": "user", "message": userMessage});
+      _controller.clear();
+    });
+
+    // Send the message to the server and get a response
+    var url =
+        'https://81bf-35-229-71-34.ngrok-free.app/predict'; // Replace with your actual API URL
+    var response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"prompt": userMessage}),
+    );
+
+    if (response.statusCode == 200) {
+      var data = jsonDecode(response.body);
       setState(() {
-        _messages.add(_controller.text);
-        _controller.clear();
+        _messages.add({"role": "bot", "message": data['response']});
+      });
+    } else {
+      setState(() {
+        _messages.add({
+          "role": "bot",
+          "message": "Error: Could not connect to the server."
+        });
       });
     }
   }
 
-  void _startNewChat() {
-    if (_messages.isNotEmpty) {
-      _chatHistory.add(List.from(_messages));
-      _messages.clear();
-    }
-    Navigator.pop(context); // Close the drawer
-    setState(() {});
-  }
-
-  Widget _buildMessage(String message) {
+  Widget _buildMessage(Map<String, String> message) {
+    bool isUserMessage = message['role'] == 'user';
     return Container(
       margin: EdgeInsets.symmetric(vertical: 10.0),
       padding: EdgeInsets.all(10.0),
+      alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
       decoration: BoxDecoration(
-        color: Color(0xFF343541),
+        color: isUserMessage ? Color(0xFF343541) : Color(0xFF444654),
         borderRadius: BorderRadius.circular(10.0),
       ),
       child: Text(
-        message,
+        message['message']!,
         style: TextStyle(color: Colors.white, fontSize: 16.0),
       ),
-    );
-  }
-
-  Widget _buildChatHistory() {
-    return ListView.builder(
-      shrinkWrap: true,
-      itemCount: _chatHistory.length,
-      itemBuilder: (context, index) {
-        return ListTile(
-          title: Text('Chat ${index + 1}',
-              style: TextStyle(color: Colors.white)),
-          onTap: () {
-            Navigator.pop(context); // Close the drawer
-            setState(() {
-              _messages.clear();
-              _messages.addAll(_chatHistory[index]);
-            });
-          },
-        );
-      },
     );
   }
 
@@ -68,56 +67,8 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: Color(0xFF202123),
       appBar: AppBar(
-        title: Text('ChatGPT'),
+        title: Text('Punjabi LLM'),
         backgroundColor: Color(0xFF343541),
-      ),
-      drawer: Drawer(
-        child: Container(
-          color: Color(0xFF202123),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(color: Color(0xFF343541)),
-                margin: EdgeInsets.zero,
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Chat History',
-                      style: TextStyle(fontSize: 24.0, color: Colors.white),
-                    ),
-                    SizedBox(height: 10.0),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Color(0xFF444654),
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      child: ListTile(
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                        leading: Icon(Icons.chat, color: Colors.white),
-                        title: Text('New Chat', style: TextStyle(color: Colors.white)),
-                        onTap: _startNewChat,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: _chatHistory.isEmpty
-                      ? Center(
-                          child: Text('No chat history available',
-                              style: TextStyle(color: Colors.white)))
-                      : _buildChatHistory(),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
       body: Column(
         children: [

@@ -19,7 +19,7 @@ class LoginPage extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
             Image.asset(
-              'assets/images/landing.jpeg',
+              'assets/images/logo.png',
               height: 350,
               width: 350,
             ),
@@ -82,7 +82,8 @@ class LoginPage extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 20), // Adjusted spacing after the button
+                  const SizedBox(
+                      height: 20), // Adjusted spacing after the button
                 ],
               ),
             ),
