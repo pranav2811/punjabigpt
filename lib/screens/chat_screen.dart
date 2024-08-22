@@ -24,7 +24,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Send the message to the server and get a response
     var url =
-        'https://81bf-35-229-71-34.ngrok-free.app/predict'; // Replace with your actual API URL
+        'https://5c00-34-125-215-19.ngrok-free.app/predict'; // Replace with your actual API URL
     var response = await http.post(
       Uri.parse(url),
       headers: {"Content-Type": "application/json"},
