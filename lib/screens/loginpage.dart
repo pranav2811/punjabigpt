@@ -18,40 +18,46 @@ class LoginPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 20),
-            Image.asset(
-              'assets/images/landing.jpeg',
-              height: 350,
-              width: 350,
-            ),
-            const SizedBox(height: 20),
-            const Padding(
-              padding: EdgeInsets.only(left: 37),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Login",
-                    style: TextStyle(
-                      color: Colors.white, // White text color
-                      fontWeight: FontWeight.bold,
-                      fontSize: 30,
-                    ),
-                  ),
-                  Text(
-                    'Login to continue using the app',
-                    style: TextStyle(
-                      color: Colors.white70, // Slightly faded white
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/logo.png',
+                  height: 350,
+                  width: 350,
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 37),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Padding(
+                    padding: EdgeInsets.only(left: 35),
+                    child: const Text(
+                      "Login",
+                      style: TextStyle(
+                        color: Colors.white, // White text color
+                        fontWeight: FontWeight.bold,
+                        fontSize: 30,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 5), // Slight space between texts
+                  Padding(
+                    padding: const EdgeInsets.only(left: 35.0),
+                    child: const Text(
+                      'Login to continue using the app',
+                      style: TextStyle(
+                        color: Colors.white70, // Slightly faded white
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                      height: 20), // Space between text and text fields
                   MyTextField(
                     controller: emailController,
                     hintText: "Email",
@@ -71,7 +77,8 @@ class LoginPage extends StatelessWidget {
                     textFieldHeight: 55.0,
                     textFieldWidth: double.infinity,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(
+                      height: 30), // Increased space after text fields
                   MyButton(
                     buttonText: 'Login',
                     onPressedAsync: () async {
@@ -82,7 +89,8 @@ class LoginPage extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 20), // Adjusted spacing after the button
+                  const SizedBox(
+                      height: 20), // Adjusted spacing after the button
                 ],
               ),
             ),
