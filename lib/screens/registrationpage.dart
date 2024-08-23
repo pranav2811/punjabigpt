@@ -20,7 +20,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final ScrollController _scrollController = ScrollController();
 
   void _scrollToFocusedInput(BuildContext context, FocusNode focusNode) {
-    // Wait until the frame has been built to avoid errors with context size
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (focusNode.hasFocus) {
         _scrollController.animateTo(
@@ -153,12 +152,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       );
 
                       // If registration is successful, save user details in Firestore
-                      FirebaseFirestore.instance
+                      await FirebaseFirestore.instance
                           .collection('users')
                           .doc(userCredential.user!.uid)
                           .set({
                         'name': nameController.text,
                         'email': emailController.text,
+                        'createdAt': FieldValue
+                            .serverTimestamp(), // Store creation timestamp
                       });
 
                       Fluttertoast.showToast(
@@ -187,6 +188,12 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
                       Fluttertoast.showToast(
                         msg: errorMessage,
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.BOTTOM,
+                      );
+                    } catch (e) {
+                      Fluttertoast.showToast(
+                        msg: "An unexpected error occurred. Please try again.",
                         toastLength: Toast.LENGTH_SHORT,
                         gravity: ToastGravity.BOTTOM,
                       );
