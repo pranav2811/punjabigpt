@@ -4,6 +4,7 @@ import 'package:punjabigpt/components/my_textfield.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:punjabigpt/screens/registrationpage.dart'; // Import the RegistrationPage
+import 'package:punjabigpt/screens/forgotpassword.dart'; // Import the ForgotPasswordPage
 import 'chat_screen.dart'; // Assuming you have a ChatScreen widget
 
 class LoginPage extends StatelessWidget {
@@ -123,6 +124,26 @@ class LoginPage extends StatelessWidget {
                   Center(
                     child: GestureDetector(
                       onTap: () {
+                        // Navigate to the ForgotPasswordPage
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ForgotPasswordPage()),
+                        );
+                      },
+                      child: const Text(
+                        "Forgot Password?",
+                        style: TextStyle(
+                          color: Colors.blue, // Highlighted blue color
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10), // Space between the links
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
                         // Navigate to the RegistrationPage
                         Navigator.push(
                           context,
@@ -135,8 +156,6 @@ class LoginPage extends StatelessWidget {
                         style: TextStyle(
                           color: Colors.blue, // Highlighted blue color
                           fontSize: 16,
-                          decoration:
-                              TextDecoration.underline, // Underline the text
                         ),
                       ),
                     ),

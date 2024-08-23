@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:punjabigpt/components/my_button.dart';
 import 'package:punjabigpt/components/my_textfield.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'chat_screen.dart'; // Assuming you have a ChatScreen widget
 
@@ -15,8 +14,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   void _scrollToFocusedInput(BuildContext context, FocusNode focusNode) {
@@ -150,17 +148,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         email: emailController.text,
                         password: passwordController.text,
                       );
-
-                      // If registration is successful, save user details in Firestore
-                      await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(userCredential.user!.uid)
-                          .set({
-                        'name': nameController.text,
-                        'email': emailController.text,
-                        'createdAt': FieldValue
-                            .serverTimestamp(), // Store creation timestamp
-                      });
 
                       Fluttertoast.showToast(
                         msg: "Registration Successful!",

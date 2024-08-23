@@ -149,11 +149,34 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void _logout() async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.pop(context); // Close the drawer if open
-    Navigator.push(
-        context, MaterialPageRoute(builder: (context) => LoginPage()));
+  void _showLogoutConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Logout'),
+          content: Text('Are you sure you want to log out?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('No'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+            ),
+            TextButton(
+              child: Text('Yes'),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close the dialog
+                await FirebaseAuth.instance.signOut();
+                Navigator.pop(context); // Close the drawer if open
+                Navigator.pushReplacement(context,
+                    MaterialPageRoute(builder: (context) => LoginPage()));
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -168,7 +191,7 @@ class _ChatScreenState extends State<ChatScreen> {
             icon: Icon(Icons.more_vert), // Three dot vertical menu icon
             onSelected: (value) {
               if (value == 'logout') {
-                _logout();
+                _showLogoutConfirmationDialog(); // Show confirmation dialog
               }
             },
             itemBuilder: (BuildContext context) {
