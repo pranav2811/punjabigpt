@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "859622230501",
+    "project_id": "punjabigpt",
+    "storage_bucket": "punjabigpt.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:859622230501:android:8ff00f1f9d06278109870c",
+        "android_client_info": {
+          "package_name": "com.example.punjabigpt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKNnsnL4Mkfq3NOSaPXt2ftdXQlV6kULo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

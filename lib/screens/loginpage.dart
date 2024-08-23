@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:punjabigpt/components/my_button.dart';
 import 'package:punjabigpt/components/my_textfield.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:punjabigpt/screens/registrationpage.dart'; // Import the RegistrationPage
 import 'chat_screen.dart'; // Assuming you have a ChatScreen widget
 
 class LoginPage extends StatelessWidget {
@@ -82,15 +84,64 @@ class LoginPage extends StatelessWidget {
                   MyButton(
                     buttonText: 'Login',
                     onPressedAsync: () async {
-                      // No authentication, simply navigate to the ChatScreen
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => ChatScreen()),
-                      );
+                      try {
+                        // Authenticate the user with Firebase Auth
+                        UserCredential userCredential = await FirebaseAuth
+                            .instance
+                            .signInWithEmailAndPassword(
+                          email: emailController.text,
+                          password: passwordController.text,
+                        );
+
+                        // If successful, navigate to the ChatScreen
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => ChatScreen()),
+                        );
+                      } on FirebaseAuthException catch (e) {
+                        String errorMessage;
+                        if (e.code == 'user-not-found') {
+                          errorMessage = 'No user found for that email.';
+                        } else if (e.code == 'wrong-password') {
+                          errorMessage = 'Wrong password provided.';
+                        } else if (e.code == 'invalid-email') {
+                          errorMessage = 'The email address is not valid.';
+                        } else {
+                          errorMessage = 'Login failed. Please try again.';
+                        }
+
+                        Fluttertoast.showToast(
+                          msg: errorMessage,
+                          toastLength: Toast.LENGTH_SHORT,
+                          gravity: ToastGravity.BOTTOM,
+                        );
+                      }
                     },
                   ),
                   const SizedBox(
                       height: 20), // Adjusted spacing after the button
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        // Navigate to the RegistrationPage
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => RegistrationPage()),
+                        );
+                      },
+                      child: const Text(
+                        "New User? Register Now",
+                        style: TextStyle(
+                          color: Colors.blue, // Highlighted blue color
+                          fontSize: 16,
+                          decoration:
+                              TextDecoration.underline, // Underline the text
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),

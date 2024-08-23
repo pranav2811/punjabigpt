@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:punjabigpt/screens/loginpage.dart'; // Import LoginPage
 
 class ChatScreen extends StatefulWidget {
   @override
@@ -147,6 +149,13 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  void _logout() async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pop(context); // Close the drawer if open
+    Navigator.push(
+        context, MaterialPageRoute(builder: (context) => LoginPage()));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -155,9 +164,21 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Text('Punjabi LLM'),
         backgroundColor: Color(0xFF343541),
         actions: [
-          IconButton(
-            icon: Icon(Icons.save),
-            onPressed: _saveChatToHistory,
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert), // Three dot vertical menu icon
+            onSelected: (value) {
+              if (value == 'logout') {
+                _logout();
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                PopupMenuItem(
+                  value: 'logout',
+                  child: Text('Logout'),
+                ),
+              ];
+            },
           ),
         ],
       ),
@@ -228,7 +249,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    style: TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: 'Enter your message...',
                       hintStyle: TextStyle(color: Colors.white54),

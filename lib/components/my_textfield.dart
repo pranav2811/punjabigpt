@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 class MyTextField extends StatelessWidget {
-  final controller;
+  final TextEditingController controller;
   final String hintText;
   final bool obscureText;
   final IconData prefixIconData;
   final Color prefixIconColor;
   final double textFieldHeight;
   final double textFieldWidth;
+  final Function(FocusNode)? onFocusChange;
 
   const MyTextField({
     super.key,
@@ -18,10 +19,20 @@ class MyTextField extends StatelessWidget {
     required this.prefixIconColor,
     required this.textFieldHeight,
     required this.textFieldWidth,
+    this.onFocusChange, // Added onFocusChange parameter
   });
 
   @override
   Widget build(BuildContext context) {
+    FocusNode focusNode = FocusNode();
+
+    // Add a listener to handle focus change
+    focusNode.addListener(() {
+      if (onFocusChange != null) {
+        onFocusChange!(focusNode);
+      }
+    });
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 35.0),
       child: SizedBox(
@@ -30,10 +41,12 @@ class MyTextField extends StatelessWidget {
         child: TextField(
           controller: controller,
           obscureText: obscureText,
+          focusNode: focusNode, // Use the custom focus node
           style: TextStyle(color: Colors.white), // Text color inside the field
           decoration: InputDecoration(
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF444654)), // Border color for enabled state
+              borderSide: BorderSide(
+                  color: Color(0xFF444654)), // Border color for enabled state
               borderRadius: BorderRadius.circular(10.0),
             ),
             focusedBorder: OutlineInputBorder(
