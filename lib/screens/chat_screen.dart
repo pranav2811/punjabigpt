@@ -14,6 +14,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> _messages = [];
   final List<Map<String, String>> _chatHistory = [];
+  String? _currentChatTitle; // Track the current chat title
 
   @override
   void initState() {
@@ -46,8 +47,10 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.add({"role": "bot", "message": data['response']});
       });
 
-      // Update chat history in Firestore after getting the bot response
-      _saveChatToHistory();
+      // Update current chat title if it's the first message in the chat
+      if (_currentChatTitle == null) {
+        _currentChatTitle = _getFirstFiveWords(userMessage);
+      }
     } else {
       setState(() {
         _messages.add({
@@ -65,13 +68,10 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
-    if (_messages.isNotEmpty) {
-      String firstMessage = _messages.first['message']!;
-      String chatTitle = _getFirstFiveWords(firstMessage);
-
+    if (_messages.isNotEmpty && _currentChatTitle != null) {
       // Add to local chat history
       _chatHistory.add({
-        "title": chatTitle,
+        "title": _currentChatTitle!,
         "messages": jsonEncode(_messages),
       });
 
@@ -81,7 +81,7 @@ class _ChatScreenState extends State<ChatScreen> {
             .collection('users')
             .doc(user.uid)
             .collection('chats')
-            .doc(chatTitle) // Use chat title as the document ID
+            .doc(_currentChatTitle) // Use chat title as the document ID
             .set({
           "messages": jsonEncode(_messages),
         });
@@ -91,6 +91,7 @@ class _ChatScreenState extends State<ChatScreen> {
       }
 
       _messages.clear(); // Clear current chat
+      _currentChatTitle = null; // Reset current chat title
       setState(() {});
     }
   }
@@ -129,6 +130,7 @@ class _ChatScreenState extends State<ChatScreen> {
     Navigator.pop(context); // Close the drawer
     setState(() {
       _messages.clear();
+      _currentChatTitle = null; // Reset current chat title for a new chat
     });
   }
 
@@ -222,6 +224,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     .map((e) => Map<String, String>.from(e))
                     .toList(),
               );
+              _currentChatTitle =
+                  _chatHistory[index]['title']; // Set current chat title
             });
           },
         );
