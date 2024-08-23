@@ -7,10 +7,10 @@ import 'package:punjabigpt/screens/chat_screen.dart'; // Assuming you have a Cha
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(ChatGPTCloneApp());
+  runApp(MyApp());
 }
 
-class ChatGPTCloneApp extends StatelessWidget {
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

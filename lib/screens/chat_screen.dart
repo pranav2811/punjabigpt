@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:punjabigpt/screens/loginpage.dart'; // Import LoginPage
 
 class ChatScreen extends StatefulWidget {
@@ -13,6 +14,12 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> _messages = [];
   final List<Map<String, String>> _chatHistory = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChatHistory(); // Load chat history on initialization
+  }
 
   void _sendMessage() async {
     if (_controller.text.isEmpty) return;
@@ -38,6 +45,9 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _messages.add({"role": "bot", "message": data['response']});
       });
+
+      // Update chat history in Firestore after getting the bot response
+      _saveChatToHistory();
     } else {
       setState(() {
         _messages.add({
@@ -48,18 +58,69 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _saveChatToHistory() {
+  void _saveChatToHistory() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print("User not authenticated. Cannot save chat.");
+      return;
+    }
+
     if (_messages.isNotEmpty) {
       String firstMessage = _messages.first['message']!;
       String chatTitle = _getFirstFiveWords(firstMessage);
 
+      // Add to local chat history
       _chatHistory.add({
         "title": chatTitle,
         "messages": jsonEncode(_messages),
       });
 
+      // Save each chat as a separate field in the user's collection
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('chats')
+            .doc(chatTitle) // Use chat title as the document ID
+            .set({
+          "messages": jsonEncode(_messages),
+        });
+        print("Chat history saved to Firestore in user-specific collection.");
+      } catch (e) {
+        print("Failed to save chat history: $e");
+      }
+
       _messages.clear(); // Clear current chat
       setState(() {});
+    }
+  }
+
+  void _loadChatHistory() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print("User not authenticated. Cannot load chat.");
+      return;
+    }
+
+    try {
+      var chatDocs = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('chats')
+          .get();
+
+      setState(() {
+        _chatHistory.clear();
+        chatDocs.docs.forEach((doc) {
+          _chatHistory.add({
+            "title": doc.id, // Document ID is the chat title
+            "messages": doc.data()['messages'],
+          });
+        });
+        print("Chat history loaded from Firestore.");
+      });
+    } catch (e) {
+      print("Failed to load chat history: $e");
     }
   }
 
@@ -71,10 +132,29 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void _deleteChat(int index) {
-    setState(() {
-      _chatHistory.removeAt(index);
-    });
+  void _deleteChat(int index) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print("User not authenticated. Cannot delete chat.");
+      return;
+    }
+
+    try {
+      // Delete the chat from Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('chats')
+          .doc(_chatHistory[index]['title']!)
+          .delete();
+
+      setState(() {
+        _chatHistory.removeAt(index);
+      });
+      print("Chat deleted from Firestore and local history.");
+    } catch (e) {
+      print("Failed to delete chat: $e");
+    }
   }
 
   String _getFirstFiveWords(String message) {
@@ -166,11 +246,14 @@ class _ChatScreenState extends State<ChatScreen> {
             TextButton(
               child: Text('Yes'),
               onPressed: () async {
+                _saveChatToHistory(); // Save the current chat before logout
                 Navigator.of(context).pop(); // Close the dialog
                 await FirebaseAuth.instance.signOut();
-                Navigator.pop(context); // Close the drawer if open
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => LoginPage()));
+                Future.delayed(Duration(milliseconds: 100), () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (context) => LoginPage()),
+                  );
+                });
               },
             ),
           ],
