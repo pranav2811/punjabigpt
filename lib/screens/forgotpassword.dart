@@ -5,6 +5,8 @@ import 'package:punjabigpt/components/my_textfield.dart';
 import 'package:punjabigpt/components/my_button.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
+  const ForgotPasswordPage({super.key});
+
   @override
   _ForgotPasswordPageState createState() => _ForgotPasswordPageState();
 }
@@ -54,10 +56,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF202123), // Dark background color
+      backgroundColor: const Color(0xFF202123), // Dark background color
       appBar: AppBar(
-        title: Text('Forgot Password'),
-        backgroundColor: Color(0xFF343541),
+        title: const Text('Forgot Password'),
+        backgroundColor: const Color(0xFF343541),
       ),
       body: SafeArea(
         child: Center(

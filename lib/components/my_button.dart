@@ -18,8 +18,10 @@ class MyButton extends StatelessWidget {
           onPressedAsync();
         },
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 10), // Adjust padding if needed
-          backgroundColor: Color(0xFF00A67E), // Green background color to match the theme
+          padding: const EdgeInsets.symmetric(
+              horizontal: 50, vertical: 10), // Adjust padding if needed
+          backgroundColor: const Color(
+              0xFF00A67E), // Green background color to match the theme
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(50), // Rounded corners
           ),

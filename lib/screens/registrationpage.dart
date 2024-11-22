@@ -6,6 +6,8 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'chat_screen.dart'; // Assuming you have a ChatScreen widget
 
 class RegistrationPage extends StatefulWidget {
+  const RegistrationPage({super.key});
+
   @override
   _RegistrationPageState createState() => _RegistrationPageState();
 }
@@ -14,7 +16,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   void _scrollToFocusedInput(BuildContext context, FocusNode focusNode) {
@@ -22,7 +25,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       if (focusNode.hasFocus) {
         _scrollController.animateTo(
           focusNode.offset.dy - 100.0, // Adjust the offset as needed
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
       }
@@ -33,7 +36,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Color(0xFF202123), // Dark background color
+      backgroundColor: const Color(0xFF202123), // Dark background color
       body: SafeArea(
         child: SingleChildScrollView(
           controller: _scrollController,
@@ -54,9 +57,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                Padding(
+                const Padding(
                   padding: EdgeInsets.only(left: 35),
-                  child: const Text(
+                  child: Text(
                     "Register",
                     style: TextStyle(
                       color: Colors.white, // White text color
@@ -66,9 +69,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   ),
                 ),
                 const SizedBox(height: 5), // Slight space between texts
-                Padding(
-                  padding: const EdgeInsets.only(left: 35.0),
-                  child: const Text(
+                const Padding(
+                  padding: EdgeInsets.only(left: 35.0),
+                  child: Text(
                     'Create an account to continue',
                     style: TextStyle(
                       color: Colors.white70, // Slightly faded white

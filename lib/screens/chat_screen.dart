@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:punjabigpt/screens/loginpage.dart'; // Import LoginPage
 
 class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key});
+
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
@@ -15,6 +17,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, String>> _messages = [];
   final List<Map<String, String>> _chatHistory = [];
   String? _currentChatTitle; // Track the current chat title
+
+  // Added variables for model selection
+  String _selectedModel = 'gemma 2 9b';
+  final List<String> _models = ['gemma 2 9b', 'llama 3', 'Sarvam - 1'];
 
   @override
   void initState() {
@@ -38,7 +44,10 @@ class _ChatScreenState extends State<ChatScreen> {
     var response = await http.post(
       Uri.parse(url),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"prompt": userMessage}),
+      body: jsonEncode({
+        "prompt": userMessage,
+        "model": _selectedModel, // Include selected model
+      }),
     );
 
     if (response.statusCode == 200) {
@@ -48,9 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
 
       // Update current chat title if it's the first message in the chat
-      if (_currentChatTitle == null) {
-        _currentChatTitle = _getFirstFiveWords(userMessage);
-      }
+      _currentChatTitle ??= _getFirstFiveWords(userMessage);
     } else {
       setState(() {
         _messages.add({
@@ -112,12 +119,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
       setState(() {
         _chatHistory.clear();
-        chatDocs.docs.forEach((doc) {
+        for (var doc in chatDocs.docs) {
           _chatHistory.add({
             "title": doc.id, // Document ID is the chat title
             "messages": doc.data()['messages'],
           });
-        });
+        }
         print("Chat history loaded from Firestore.");
       });
     } catch (e) {
@@ -162,7 +169,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String _getFirstFiveWords(String message) {
     List<String> words = message.split(' ');
     if (words.length > 5) {
-      return words.take(5).join(' ') + '...';
+      return '${words.take(5).join(' ')}...';
     } else {
       return message;
     }
@@ -173,15 +180,16 @@ class _ChatScreenState extends State<ChatScreen> {
     return Align(
       alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
-        padding: EdgeInsets.all(12.0),
+        margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
+        padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
-          color: isUserMessage ? Color(0xFF343541) : Color(0xFF444654),
+          color:
+              isUserMessage ? const Color(0xFF343541) : const Color(0xFF444654),
           borderRadius: BorderRadius.circular(20.0), // Rounded rectangle
         ),
         child: Text(
           message['message']!,
-          style: TextStyle(color: Colors.white, fontSize: 16.0),
+          style: const TextStyle(color: Colors.white, fontSize: 16.0),
         ),
       ),
     );
@@ -194,13 +202,14 @@ class _ChatScreenState extends State<ChatScreen> {
       itemBuilder: (context, index) {
         return ListTile(
           contentPadding:
-              EdgeInsets.symmetric(horizontal: 12.0), // Adjust padding
+              const EdgeInsets.symmetric(horizontal: 12.0), // Adjust padding
           title: Text(
             _chatHistory[index]['title']!,
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
           ),
           trailing: PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: Colors.white),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
               if (value == 'delete') {
                 _deleteChat(index);
@@ -208,7 +217,7 @@ class _ChatScreenState extends State<ChatScreen> {
             },
             itemBuilder: (BuildContext context) {
               return [
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'delete',
                   child: Text('Delete Chat'),
                 ),
@@ -238,22 +247,22 @@ class _ChatScreenState extends State<ChatScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Logout'),
-          content: Text('Are you sure you want to log out?'),
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to log out?'),
           actions: <Widget>[
             TextButton(
-              child: Text('No'),
+              child: const Text('No'),
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
               },
             ),
             TextButton(
-              child: Text('Yes'),
+              child: const Text('Yes'),
               onPressed: () async {
                 _saveChatToHistory(); // Save the current chat before logout
                 Navigator.of(context).pop(); // Close the dialog
                 await FirebaseAuth.instance.signOut();
-                Future.delayed(Duration(milliseconds: 100), () {
+                Future.delayed(const Duration(milliseconds: 100), () {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (context) => LoginPage()),
                   );
@@ -269,13 +278,32 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF202123),
+      backgroundColor: const Color(0xFF202123),
       appBar: AppBar(
-        title: Text('Punjabi LLM'),
-        backgroundColor: Color(0xFF343541),
+        backgroundColor: const Color(0xFF343541),
+        centerTitle: true, // Center the title
+        title: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: _selectedModel,
+            dropdownColor: const Color(0xFF343541),
+            style: const TextStyle(color: Colors.white),
+            iconEnabledColor: Colors.white,
+            items: _models.map((String model) {
+              return DropdownMenuItem<String>(
+                value: model,
+                child: Text(model),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedModel = newValue!;
+              });
+            },
+          ),
+        ),
         actions: [
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert), // Three dot vertical menu icon
+            icon: const Icon(Icons.more_vert), // Three dot vertical menu icon
             onSelected: (value) {
               if (value == 'logout') {
                 _showLogoutConfirmationDialog(); // Show confirmation dialog
@@ -283,7 +311,7 @@ class _ChatScreenState extends State<ChatScreen> {
             },
             itemBuilder: (BuildContext context) {
               return [
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'logout',
                   child: Text('Logout'),
                 ),
@@ -294,32 +322,32 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       drawer: Drawer(
         child: Container(
-          color: Color(0xFF202123),
+          color: const Color(0xFF202123),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DrawerHeader(
-                decoration: BoxDecoration(color: Color(0xFF343541)),
+                decoration: const BoxDecoration(color: Color(0xFF343541)),
                 margin: EdgeInsets.zero,
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Chat History',
                       style: TextStyle(fontSize: 24.0, color: Colors.white),
                     ),
-                    SizedBox(height: 10.0),
+                    const SizedBox(height: 10.0),
                     Container(
                       decoration: BoxDecoration(
-                        color: Color(0xFF444654),
+                        color: const Color(0xFF444654),
                         borderRadius: BorderRadius.circular(10.0),
                       ),
                       child: ListTile(
-                        contentPadding: EdgeInsets.symmetric(
+                        contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12.0, vertical: 6.0),
-                        leading: Icon(Icons.add, color: Colors.white),
-                        title: Text('New Chat',
+                        leading: const Icon(Icons.add, color: Colors.white),
+                        title: const Text('New Chat',
                             style: TextStyle(color: Colors.white)),
                         onTap: _startNewChat,
                       ),
@@ -331,7 +359,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: _chatHistory.isEmpty
-                      ? Center(
+                      ? const Center(
                           child: Text('No chat history available',
                               style: TextStyle(color: Colors.white)))
                       : _buildChatHistory(),
@@ -345,7 +373,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: ListView.builder(
-              padding: EdgeInsets.all(10.0),
+              padding: const EdgeInsets.all(10.0),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 return _buildMessage(_messages[index]);
@@ -353,14 +381,14 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
                     style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: 'Enter your message...',
                       hintStyle: TextStyle(color: Colors.white54),
                       border: InputBorder.none,
@@ -368,7 +396,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.send, color: Color(0xFF00A67E)),
+                  icon: const Icon(Icons.send, color: Color(0xFF00A67E)),
                   onPressed: _sendMessage,
                 ),
               ],

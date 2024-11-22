@@ -11,11 +11,13 @@ class LoginPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  LoginPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Color(0xFF202123), // Dark background color
+      backgroundColor: const Color(0xFF202123), // Dark background color
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -37,9 +39,9 @@ class LoginPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
+                  const Padding(
                     padding: EdgeInsets.only(left: 35),
-                    child: const Text(
+                    child: Text(
                       "Login",
                       style: TextStyle(
                         color: Colors.white, // White text color
@@ -49,9 +51,9 @@ class LoginPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5), // Slight space between texts
-                  Padding(
-                    padding: const EdgeInsets.only(left: 35.0),
-                    child: const Text(
+                  const Padding(
+                    padding: EdgeInsets.only(left: 35.0),
+                    child: Text(
                       'Login to continue using the app',
                       style: TextStyle(
                         color: Colors.white70, // Slightly faded white

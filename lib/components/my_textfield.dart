@@ -42,26 +42,28 @@ class MyTextField extends StatelessWidget {
           controller: controller,
           obscureText: obscureText,
           focusNode: focusNode, // Use the custom focus node
-          style: TextStyle(color: Colors.white), // Text color inside the field
+          style: const TextStyle(
+              color: Colors.white), // Text color inside the field
           decoration: InputDecoration(
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(
+              borderSide: const BorderSide(
                   color: Color(0xFF444654)), // Border color for enabled state
               borderRadius: BorderRadius.circular(10.0),
             ),
-            focusedBorder: OutlineInputBorder(
+            focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
                 color: Color(0xFF00A67E), // Green border color when focused
               ),
             ),
-            fillColor: Color(0xFF343541), // Dark fill color for the text field
+            fillColor:
+                const Color(0xFF343541), // Dark fill color for the text field
             filled: true,
             prefixIcon: Icon(
               prefixIconData,
               color: prefixIconColor,
             ),
             hintText: hintText,
-            hintStyle: TextStyle(
+            hintStyle: const TextStyle(
               color: Colors.white70, // Slightly faded white for the hint text
               fontWeight: FontWeight.normal,
             ),
