@@ -7,7 +7,7 @@ import 'package:punjabigpt/screens/chat_screen.dart'; // Assuming you have a Cha
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.grey[900],
         ),
       ),
-      home: AuthWrapper(), // Use an AuthWrapper to handle redirection
+      home: const AuthWrapper(), // Use an AuthWrapper to handle redirection
     );
   }
 }
@@ -49,7 +49,7 @@ class AuthWrapper extends StatelessWidget {
           if (user == null) {
             return LoginPage(); // If user is null, show login page
           } else {
-            return ChatScreen(); // If user is signed in, show the home screen
+            return const ChatScreen(); // If user is signed in, show the home screen
           }
         }
 

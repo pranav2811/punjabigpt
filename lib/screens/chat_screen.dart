@@ -38,6 +38,20 @@ class _ChatScreenState extends State<ChatScreen> {
       _controller.clear();
     });
 
+    // Dynamically update the chat title if it's the first message
+    if (_currentChatTitle == "New Chat") {
+      setState(() {
+        _currentChatTitle = _getFirstFiveWords(userMessage);
+
+        // Update the title in the sidebar chat history
+        int chatIndex =
+            _chatHistory.indexWhere((chat) => chat['title'] == "New Chat");
+        if (chatIndex != -1) {
+          _chatHistory[chatIndex]['title'] = _currentChatTitle!;
+        }
+      });
+    }
+
     // Send the message to the server and get a response
     var url =
         'https://5c00-34-125-215-19.ngrok-free.app/predict'; // Replace with your actual API URL
@@ -55,9 +69,6 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _messages.add({"role": "bot", "message": data['response']});
       });
-
-      // Update current chat title if it's the first message in the chat
-      _currentChatTitle ??= _getFirstFiveWords(userMessage);
     } else {
       setState(() {
         _messages.add({
@@ -133,11 +144,18 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _startNewChat() {
-    _saveChatToHistory();
-    Navigator.pop(context); // Close the drawer
+    _saveChatToHistory(); // Save the current chat before starting a new one
+
+    // Create a new chat entry in the local chat history
     setState(() {
-      _messages.clear();
-      _currentChatTitle = null; // Reset current chat title for a new chat
+      _messages.clear(); // Clear the current chat messages
+      _currentChatTitle = "New Chat"; // Set default title for the new chat
+
+      // Add the new chat to the sidebar immediately
+      _chatHistory.add({
+        "title": _currentChatTitle!,
+        "messages": jsonEncode([]), // Empty chat initially
+      });
     });
   }
 
@@ -201,8 +219,7 @@ class _ChatScreenState extends State<ChatScreen> {
       itemCount: _chatHistory.length,
       itemBuilder: (context, index) {
         return ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12.0), // Adjust padding
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
           title: Text(
             _chatHistory[index]['title']!,
             style: const TextStyle(
@@ -233,43 +250,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     .map((e) => Map<String, String>.from(e))
                     .toList(),
               );
-              _currentChatTitle =
-                  _chatHistory[index]['title']; // Set current chat title
+              _currentChatTitle = _chatHistory[index]['title']; // Update title
             });
           },
-        );
-      },
-    );
-  }
-
-  void _showLogoutConfirmationDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to log out?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('No'),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-            ),
-            TextButton(
-              child: const Text('Yes'),
-              onPressed: () async {
-                _saveChatToHistory(); // Save the current chat before logout
-                Navigator.of(context).pop(); // Close the dialog
-                await FirebaseAuth.instance.signOut();
-                Future.delayed(const Duration(milliseconds: 100), () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => LoginPage()),
-                  );
-                });
-              },
-            ),
-          ],
         );
       },
     );
@@ -281,7 +264,7 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: const Color(0xFF202123),
       appBar: AppBar(
         backgroundColor: const Color(0xFF343541),
-        centerTitle: true, // Center the title
+        centerTitle: true,
         title: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: _selectedModel,
@@ -303,10 +286,12 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert), // Three dot vertical menu icon
+            icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               if (value == 'logout') {
-                _showLogoutConfirmationDialog(); // Show confirmation dialog
+                FirebaseAuth.instance.signOut();
+                Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (context) => LoginPage()));
               }
             },
             itemBuilder: (BuildContext context) {
@@ -328,8 +313,6 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               DrawerHeader(
                 decoration: const BoxDecoration(color: Color(0xFF343541)),
-                margin: EdgeInsets.zero,
-                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -338,32 +321,26 @@ class _ChatScreenState extends State<ChatScreen> {
                       style: TextStyle(fontSize: 24.0, color: Colors.white),
                     ),
                     const SizedBox(height: 10.0),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF444654),
-                        borderRadius: BorderRadius.circular(10.0),
+                    ListTile(
+                      leading: const Icon(Icons.add, color: Colors.white),
+                      title: const Text(
+                        'New Chat',
+                        style: TextStyle(color: Colors.white),
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12.0, vertical: 6.0),
-                        leading: const Icon(Icons.add, color: Colors.white),
-                        title: const Text('New Chat',
-                            style: TextStyle(color: Colors.white)),
-                        onTap: _startNewChat,
-                      ),
+                      onTap: _startNewChat,
                     ),
                   ],
                 ),
               ),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: _chatHistory.isEmpty
-                      ? const Center(
-                          child: Text('No chat history available',
-                              style: TextStyle(color: Colors.white)))
-                      : _buildChatHistory(),
-                ),
+                child: _chatHistory.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No chat history available',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      )
+                    : _buildChatHistory(),
               ),
             ],
           ),
@@ -384,6 +361,10 @@ class _ChatScreenState extends State<ChatScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
               children: [
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.add, color: Colors.white),
+                ),
                 Expanded(
                   child: TextField(
                     controller: _controller,
