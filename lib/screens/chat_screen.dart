@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:punjabigpt/screens/loginpage.dart'; // Import LoginPage
+import 'package:file_picker/file_picker.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -381,7 +382,26 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               children: [
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    FilePickerResult? result =
+                        await FilePicker.platform.pickFiles();
+                    if (result != null && result.files.single != null) {
+                      String fileName = result.files.single.name;
+                      String? filePath = result.files.single.path;
+
+                      setState(() {
+                        // Add the attached file to messages or handle it as needed
+                        _messages.add({
+                          "role": "user",
+                          "message": "Attached file: $fileName"
+                        });
+                      });
+
+                      print("File selected: $filePath");
+                    } else {
+                      print("No file selected.");
+                    }
+                  },
                   icon: const Icon(Icons.add, color: Colors.white),
                 ),
                 Expanded(
