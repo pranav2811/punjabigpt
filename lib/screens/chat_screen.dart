@@ -22,6 +22,9 @@ class _ChatScreenState extends State<ChatScreen> {
   String _selectedModel = 'gemma 2 9b';
   final List<String> _models = ['gemma 2 9b', 'llama 3', 'Sarvam - 1'];
   String? _extractedText;
+  String? _attachedFileName;
+  String? _attachedFilePath;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -37,6 +40,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       setState(() {
         _extractedText = recognizedText.text;
+        _isUploading = false;
       });
     } catch (e) {
       print("Failed to extract text: $e");
@@ -45,22 +49,42 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _sendMessage() async {
-    if (_controller.text.isEmpty && _extractedText == null) return;
+  Future<void> _attachFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if (result != null && result.files.single != null) {
+      setState(() {
+        _attachedFileName = result.files.single.name;
+        _attachedFilePath = result.files.single.path;
+        _isUploading = true;
+      });
 
-    String userMessage = _controller.text.isNotEmpty ? _controller.text : '';
+      if (_attachedFilePath != null) {
+        await _extractTextFromFile(_attachedFilePath!);
+      }
+    } else {
+      print("No file selected.");
+    }
+  }
+
+  void _sendMessage() async {
+    if (_controller.text.isEmpty && _attachedFilePath == null) return;
+
+    String userMessage = _controller.text;
 
     setState(() {
-      if (_extractedText != null) {
+      if (_attachedFilePath != null) {
         _messages.add({
           "role": "user",
-          "message": "Attached file processed",
-          "fileContent": _extractedText,
+          "message": userMessage,
+          "fileName": _attachedFileName,
+          "filePath": _attachedFilePath,
         });
       } else {
         _messages.add({"role": "user", "message": userMessage});
       }
       _controller.clear();
+      _attachedFileName = null;
+      _attachedFilePath = null;
       _extractedText = null;
     });
 
@@ -75,7 +99,22 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
-    String url = "https://your-api-url-for-rag-pipeline";
+    // Select the appropriate API URL based on the selected model
+    String url;
+    switch (_selectedModel) {
+      case 'gemma 2 9b':
+        url = "https://5c00-34-125-215-19.ngrok-free.app/predict";
+        break;
+      case 'llama 3':
+        url = "https://5c00-34-125-215-19.ngrok-free.app/predict";
+        break;
+      case 'Sarvam - 1':
+        url = "https://5c00-34-125-215-19.ngrok-free.app/predict";
+        break;
+      default:
+        url = "https://5c00-34-125-215-19.ngrok-free.app/predict";
+        break;
+    }
 
     var response = await http.post(
       Uri.parse(url),
@@ -98,30 +137,6 @@ class _ChatScreenState extends State<ChatScreen> {
           "message": "Error: Could not connect to the server."
         });
       });
-    }
-  }
-
-  Future<void> _attachFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles();
-    if (result != null && result.files.single != null) {
-      String fileName = result.files.single.name;
-      String? filePath = result.files.single.path;
-
-      if (filePath != null) {
-        setState(() {
-          _messages.add({
-            "role": "user",
-            "message": "Attached file: $fileName",
-            "filePath": filePath,
-          });
-        });
-
-        await _extractTextFromFile(filePath);
-      } else {
-        print("File path is null.");
-      }
-    } else {
-      print("No file selected.");
     }
   }
 
@@ -186,14 +201,22 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _startNewChat() {
-    _saveChatToHistory();
+    // Save the current chat to history if it exists
+    if (_currentChatTitle != null && _messages.isNotEmpty) {
+      _saveChatToHistory();
+    }
 
     setState(() {
+      // Clear messages for the new chat
       _messages.clear();
-      _currentChatTitle = "New Chat";
+
+      // Create a unique title for the new chat
+      _currentChatTitle = "New Chat ";
+
+      // Add the new chat to the chat history
       _chatHistory.add({
         "title": _currentChatTitle!,
-        "messages": jsonEncode([]),
+        "messages": jsonEncode([]), // Start with an empty chat
       });
     });
   }
@@ -231,10 +254,62 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Widget _buildMessageInput() {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: _attachFile,
+          icon: const Icon(Icons.attach_file, color: Colors.white),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_attachedFileName != null)
+                Row(
+                  children: [
+                    const Icon(Icons.insert_drive_file, color: Colors.white),
+                    const SizedBox(width: 8.0),
+                    Expanded(
+                      child: Text(
+                        _attachedFileName!,
+                        style: const TextStyle(color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_isUploading)
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.0,
+                          color: Colors.white,
+                        ),
+                      ),
+                  ],
+                ),
+              TextField(
+                controller: _controller,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Enter your message...',
+                  hintStyle: TextStyle(color: Colors.white54),
+                  border: InputBorder.none,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.send, color: Color(0xFF00A67E)),
+          onPressed: _sendMessage,
+        ),
+      ],
+    );
+  }
+
   Widget _buildMessage(Map<String, dynamic> message) {
     bool isUserMessage = message['role'] == 'user';
-    String displayMessage = message['message'] ?? '';
-
     return Align(
       alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -245,14 +320,22 @@ class _ChatScreenState extends State<ChatScreen> {
               isUserMessage ? const Color(0xFF343541) : const Color(0xFF444654),
           borderRadius: BorderRadius.circular(20.0),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (message['filePath'] != null)
-              const Icon(Icons.insert_drive_file, color: Colors.white),
-            if (message['filePath'] != null) const SizedBox(width: 8.0),
+            if (message['fileName'] != null)
+              Row(
+                children: [
+                  const Icon(Icons.insert_drive_file, color: Colors.white),
+                  const SizedBox(width: 8.0),
+                  Text(
+                    message['fileName'],
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
             Text(
-              displayMessage,
+              message['message'] ?? '',
               style: const TextStyle(color: Colors.white, fontSize: 16.0),
             ),
           ],
@@ -373,29 +456,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: _attachFile,
-                  icon: const Icon(Icons.add, color: Colors.white),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'Enter your message...',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Color(0xFF00A67E)),
-                  onPressed: _sendMessage,
-                ),
-              ],
-            ),
+            child: _buildMessageInput(),
           ),
         ],
       ),
