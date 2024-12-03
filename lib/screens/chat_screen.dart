@@ -52,9 +52,28 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
+    // Select the appropriate API URL based on the selected model
+    String url;
+    switch (_selectedModel) {
+      case 'gemma 2 9b':
+        url =
+            "https://4d88-35-186-154-94.ngrok-free.app/predict"; // Replace with actual API URL
+        break;
+      case 'llama 3':
+        url =
+            "https://4d88-35-186-154-94.ngrok-free.app/predict"; // Replace with actual API URL
+        break;
+      case 'Sarvam - 1':
+        url =
+            "https://4d88-35-186-154-94.ngrok-free.app/predict"; // Replace with actual API URL
+        break;
+      default:
+        url =
+            "https://4d88-35-186-154-94.ngrok-free.app/predict"; // Fallback URL
+        break;
+    }
+
     // Send the message to the server and get a response
-    var url =
-        'https://5c00-34-125-215-19.ngrok-free.app/predict'; // Replace with your actual API URL
     var response = await http.post(
       Uri.parse(url),
       headers: {"Content-Type": "application/json"},
