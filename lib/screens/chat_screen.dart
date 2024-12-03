@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import 'package:punjabigpt/screens/loginpage.dart'; // Import LoginPage
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:punjabigpt/screens/loginpage.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:google_ml_kit/google_ml_kit.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -15,36 +16,57 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, String>> _messages = [];
-  final List<Map<String, String>> _chatHistory = [];
-  String? _currentChatTitle; // Track the current chat title
-
-  // Added variables for model selection
+  final List<Map<String, dynamic>> _messages = [];
+  final List<Map<String, dynamic>> _chatHistory = [];
+  String? _currentChatTitle;
   String _selectedModel = 'gemma 2 9b';
   final List<String> _models = ['gemma 2 9b', 'llama 3', 'Sarvam - 1'];
+  String? _extractedText;
 
   @override
   void initState() {
     super.initState();
-    _loadChatHistory(); // Load chat history on initialization
+    _loadChatHistory();
+  }
+
+  Future<void> _extractTextFromFile(String filePath) async {
+    final textRecognizer = GoogleMlKit.vision.textRecognizer();
+    try {
+      final inputImage = InputImage.fromFilePath(filePath);
+      final recognizedText = await textRecognizer.processImage(inputImage);
+
+      setState(() {
+        _extractedText = recognizedText.text;
+      });
+    } catch (e) {
+      print("Failed to extract text: $e");
+    } finally {
+      textRecognizer.close();
+    }
   }
 
   void _sendMessage() async {
-    if (_controller.text.isEmpty) return;
+    if (_controller.text.isEmpty && _extractedText == null) return;
 
-    String userMessage = _controller.text;
+    String userMessage = _controller.text.isNotEmpty ? _controller.text : '';
 
     setState(() {
-      _messages.add({"role": "user", "message": userMessage});
+      if (_extractedText != null) {
+        _messages.add({
+          "role": "user",
+          "message": "Attached file processed",
+          "fileContent": _extractedText,
+        });
+      } else {
+        _messages.add({"role": "user", "message": userMessage});
+      }
       _controller.clear();
+      _extractedText = null;
     });
 
-    // Dynamically update the chat title if it's the first message
     if (_currentChatTitle == "New Chat") {
       setState(() {
         _currentChatTitle = _getFirstFiveWords(userMessage);
-
-        // Update the title in the sidebar chat history
         int chatIndex =
             _chatHistory.indexWhere((chat) => chat['title'] == "New Chat");
         if (chatIndex != -1) {
@@ -53,34 +75,14 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
-    // Select the appropriate API URL based on the selected model
-    String url;
-    switch (_selectedModel) {
-      case 'gemma 2 9b':
-        url =
-            "https://4d88-35-186-154-94.ngrok-free.app/predict"; // Replace with actual API URL
-        break;
-      case 'llama 3':
-        url =
-            "https://4d88-35-186-154-94.ngrok-free.app/predict"; // Replace with actual API URL
-        break;
-      case 'Sarvam - 1':
-        url =
-            "https://4d88-35-186-154-94.ngrok-free.app/predict"; // Replace with actual API URL
-        break;
-      default:
-        url =
-            "https://4d88-35-186-154-94.ngrok-free.app/predict"; // Fallback URL
-        break;
-    }
+    String url = "https://your-api-url-for-rag-pipeline";
 
-    // Send the message to the server and get a response
     var response = await http.post(
       Uri.parse(url),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
-        "prompt": userMessage,
-        "model": _selectedModel, // Include selected model
+        "prompt": _extractedText ?? userMessage,
+        "model": _selectedModel,
       }),
     );
 
@@ -99,6 +101,30 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _attachFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if (result != null && result.files.single != null) {
+      String fileName = result.files.single.name;
+      String? filePath = result.files.single.path;
+
+      if (filePath != null) {
+        setState(() {
+          _messages.add({
+            "role": "user",
+            "message": "Attached file: $fileName",
+            "filePath": filePath,
+          });
+        });
+
+        await _extractTextFromFile(filePath);
+      } else {
+        print("File path is null.");
+      }
+    } else {
+      print("No file selected.");
+    }
+  }
+
   void _saveChatToHistory() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -107,29 +133,25 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     if (_messages.isNotEmpty && _currentChatTitle != null) {
-      // Add to local chat history
       _chatHistory.add({
         "title": _currentChatTitle!,
         "messages": jsonEncode(_messages),
       });
 
-      // Save each chat as a separate field in the user's collection
       try {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('chats')
-            .doc(_currentChatTitle) // Use chat title as the document ID
-            .set({
-          "messages": jsonEncode(_messages),
-        });
-        print("Chat history saved to Firestore in user-specific collection.");
+            .doc(_currentChatTitle)
+            .set({"messages": jsonEncode(_messages)});
+        print("Chat history saved to Firestore.");
       } catch (e) {
         print("Failed to save chat history: $e");
       }
 
-      _messages.clear(); // Clear current chat
-      _currentChatTitle = null; // Reset current chat title
+      _messages.clear();
+      _currentChatTitle = null;
       setState(() {});
     }
   }
@@ -152,7 +174,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _chatHistory.clear();
         for (var doc in chatDocs.docs) {
           _chatHistory.add({
-            "title": doc.id, // Document ID is the chat title
+            "title": doc.id,
             "messages": doc.data()['messages'],
           });
         }
@@ -164,17 +186,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _startNewChat() {
-    _saveChatToHistory(); // Save the current chat before starting a new one
+    _saveChatToHistory();
 
-    // Create a new chat entry in the local chat history
     setState(() {
-      _messages.clear(); // Clear the current chat messages
-      _currentChatTitle = "New Chat"; // Set default title for the new chat
-
-      // Add the new chat to the sidebar immediately
+      _messages.clear();
+      _currentChatTitle = "New Chat";
       _chatHistory.add({
         "title": _currentChatTitle!,
-        "messages": jsonEncode([]), // Empty chat initially
+        "messages": jsonEncode([]),
       });
     });
   }
@@ -187,7 +206,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     try {
-      // Delete the chat from Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -213,8 +231,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Widget _buildMessage(Map<String, String> message) {
+  Widget _buildMessage(Map<String, dynamic> message) {
     bool isUserMessage = message['role'] == 'user';
+    String displayMessage = message['message'] ?? '';
+
     return Align(
       alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -223,11 +243,19 @@ class _ChatScreenState extends State<ChatScreen> {
         decoration: BoxDecoration(
           color:
               isUserMessage ? const Color(0xFF343541) : const Color(0xFF444654),
-          borderRadius: BorderRadius.circular(20.0), // Rounded rectangle
+          borderRadius: BorderRadius.circular(20.0),
         ),
-        child: Text(
-          message['message']!,
-          style: const TextStyle(color: Colors.white, fontSize: 16.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (message['filePath'] != null)
+              const Icon(Icons.insert_drive_file, color: Colors.white),
+            if (message['filePath'] != null) const SizedBox(width: 8.0),
+            Text(
+              displayMessage,
+              style: const TextStyle(color: Colors.white, fontSize: 16.0),
+            ),
+          ],
         ),
       ),
     );
@@ -239,11 +267,9 @@ class _ChatScreenState extends State<ChatScreen> {
       itemCount: _chatHistory.length,
       itemBuilder: (context, index) {
         return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
           title: Text(
             _chatHistory[index]['title']!,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: Colors.white),
           ),
           trailing: PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
@@ -252,25 +278,23 @@ class _ChatScreenState extends State<ChatScreen> {
                 _deleteChat(index);
               }
             },
-            itemBuilder: (BuildContext context) {
+            itemBuilder: (context) {
               return [
                 const PopupMenuItem(
-                  value: 'delete',
-                  child: Text('Delete Chat'),
-                ),
+                    value: 'delete', child: Text('Delete Chat')),
               ];
             },
           ),
           onTap: () {
-            Navigator.pop(context); // Close the drawer
+            Navigator.pop(context);
             setState(() {
               _messages.clear();
               _messages.addAll(
                 (jsonDecode(_chatHistory[index]['messages']!) as List<dynamic>)
-                    .map((e) => Map<String, String>.from(e))
+                    .map((e) => Map<String, dynamic>.from(e))
                     .toList(),
               );
-              _currentChatTitle = _chatHistory[index]['title']; // Update title
+              _currentChatTitle = _chatHistory[index]['title'];
             });
           },
         );
@@ -284,52 +308,25 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: const Color(0xFF202123),
       appBar: AppBar(
         backgroundColor: const Color(0xFF343541),
-        centerTitle: true,
         title: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: _selectedModel,
             dropdownColor: const Color(0xFF343541),
-            style: const TextStyle(color: Colors.white),
-            iconEnabledColor: Colors.white,
-            items: _models.map((String model) {
-              return DropdownMenuItem<String>(
-                value: model,
-                child: Text(model),
-              );
+            items: _models.map((model) {
+              return DropdownMenuItem(value: model, child: Text(model));
             }).toList(),
-            onChanged: (String? newValue) {
+            onChanged: (newValue) {
               setState(() {
                 _selectedModel = newValue!;
               });
             },
           ),
         ),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
-              if (value == 'logout') {
-                FirebaseAuth.instance.signOut();
-                Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => LoginPage()));
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Text('Logout'),
-                ),
-              ];
-            },
-          ),
-        ],
       ),
       drawer: Drawer(
         child: Container(
           color: const Color(0xFF202123),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DrawerHeader(
                 decoration: const BoxDecoration(color: Color(0xFF343541)),
@@ -340,13 +337,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       'Chat History',
                       style: TextStyle(fontSize: 24.0, color: Colors.white),
                     ),
-                    const SizedBox(height: 10.0),
                     ListTile(
                       leading: const Icon(Icons.add, color: Colors.white),
-                      title: const Text(
-                        'New Chat',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      title: const Text('New Chat',
+                          style: TextStyle(color: Colors.white)),
                       onTap: _startNewChat,
                     ),
                   ],
@@ -382,26 +376,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               children: [
                 IconButton(
-                  onPressed: () async {
-                    FilePickerResult? result =
-                        await FilePicker.platform.pickFiles();
-                    if (result != null && result.files.single != null) {
-                      String fileName = result.files.single.name;
-                      String? filePath = result.files.single.path;
-
-                      setState(() {
-                        // Add the attached file to messages or handle it as needed
-                        _messages.add({
-                          "role": "user",
-                          "message": "Attached file: $fileName"
-                        });
-                      });
-
-                      print("File selected: $filePath");
-                    } else {
-                      print("No file selected.");
-                    }
-                  },
+                  onPressed: _attachFile,
                   icon: const Icon(Icons.add, color: Colors.white),
                 ),
                 Expanded(
