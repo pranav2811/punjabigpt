@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'model_selection_screen.dart'; // Import Model Selection Screen
+import 'model_selection_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String serverUrl;
@@ -18,12 +18,12 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> _messages = [];
   final List<Map<String, String>> _chatHistory = [];
-  String? _currentChatTitle; // Track the current chat title
+  String? _currentChatTitle;
 
   @override
   void initState() {
     super.initState();
-    _loadChatHistory(); // Load chat history from Firebase on initialization
+    _loadChatHistory();
   }
 
   void _sendMessage() async {
@@ -36,12 +36,10 @@ class _ChatScreenState extends State<ChatScreen> {
       _controller.clear();
     });
 
-    // Dynamically update the chat title if it's the first message
     if (_currentChatTitle == "New Chat") {
       setState(() {
         _currentChatTitle = _getFirstFiveWords(userMessage);
 
-        // Update the title in the sidebar chat history
         int chatIndex =
             _chatHistory.indexWhere((chat) => chat['title'] == "New Chat");
         if (chatIndex != -1) {
@@ -50,7 +48,6 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
-    // Send the message to the server and get a response
     var response = await http.post(
       Uri.parse(widget.serverUrl),
       headers: {"Content-Type": "application/json"},
@@ -90,21 +87,20 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
 
-      // Save each chat to Firestore
       try {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('chats')
-            .doc(_currentChatTitle) // Use chat title as the document ID
+            .doc(_currentChatTitle)
             .set({"messages": jsonEncode(_messages)});
         print("Chat history saved to Firestore.");
       } catch (e) {
         print("Failed to save chat history: $e");
       }
 
-      _messages.clear(); // Clear current chat
-      _currentChatTitle = null; // Reset current chat title
+      _messages.clear();
+      _currentChatTitle = null;
       setState(() {});
     }
   }
@@ -127,7 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _chatHistory.clear();
         for (var doc in chatDocs.docs) {
           _chatHistory.add({
-            "title": doc.id, // Document ID is the chat title
+            "title": doc.id,
             "messages": doc.data()['messages'],
           });
         }
@@ -139,17 +135,16 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _startNewChat() {
-    _saveChatToHistory(); // Save the current chat before starting a new one
+    _saveChatToHistory();
 
     setState(() {
-      _messages.clear(); // Clear the current chat messages
-      _currentChatTitle = "New Chat"; // Set default title for the new chat
+      _messages.clear();
+      _currentChatTitle = "New Chat";
 
-      // Add the new chat to the sidebar if it doesn't already exist
       if (!_chatHistory.any((chat) => chat['title'] == _currentChatTitle)) {
         _chatHistory.add({
           "title": _currentChatTitle!,
-          "messages": jsonEncode([]), // Empty chat initially
+          "messages": jsonEncode([]),
         });
       }
     });
@@ -163,7 +158,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     try {
-      // Delete the chat from Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)

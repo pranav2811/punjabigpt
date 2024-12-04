@@ -6,7 +6,6 @@ class ModelSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Define models with their respective server URLs and icons
     final List<Map<String, dynamic>> models = [
       {
         "name": "Gemma",
