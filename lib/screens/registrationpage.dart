@@ -3,7 +3,7 @@ import 'package:punjabigpt/components/my_button.dart';
 import 'package:punjabigpt/components/my_textfield.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'chat_screen.dart'; // Assuming you have a ChatScreen widget
+import 'model_selection_screen.dart'; // Assuming you have a ChatScreen widget
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -161,7 +161,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       // Navigate to the ChatScreen
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => ChatScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => ModelSelectionScreen()),
                       );
                     } on FirebaseAuthException catch (e) {
                       String errorMessage;

@@ -2,7 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:punjabigpt/screens/loginpage.dart';
-import 'package:punjabigpt/screens/chat_screen.dart'; // Assuming you have a ChatScreen widget
+import 'package:punjabigpt/screens/chat_screen.dart';
+import 'package:punjabigpt/screens/model_selection_screen.dart'; // Assuming you have a ChatScreen widget
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +50,7 @@ class AuthWrapper extends StatelessWidget {
           if (user == null) {
             return LoginPage(); // If user is null, show login page
           } else {
-            return const ChatScreen(); // If user is signed in, show the home screen
+            return const ModelSelectionScreen(); // If user is signed in, show the home screen
           }
         }
 

@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:punjabigpt/screens/registrationpage.dart'; // Import the RegistrationPage
 import 'package:punjabigpt/screens/forgotpassword.dart'; // Import the ForgotPasswordPage
-import 'chat_screen.dart'; // Assuming you have a ChatScreen widget
+import 'model_selection_screen.dart'; // Assuming you have a ChatScreen widget
 
 class LoginPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -99,7 +99,8 @@ class LoginPage extends StatelessWidget {
                         // If successful, navigate to the ChatScreen
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => ChatScreen()),
+                          MaterialPageRoute(
+                              builder: (context) => ModelSelectionScreen()),
                         );
                       } on FirebaseAuthException catch (e) {
                         String errorMessage;
