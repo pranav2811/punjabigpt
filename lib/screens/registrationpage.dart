@@ -3,7 +3,7 @@ import 'package:punjabigpt/components/my_button.dart';
 import 'package:punjabigpt/components/my_textfield.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'model_selection_screen.dart'; // Assuming you have a ChatScreen widget
+import 'model_selection_screen.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -20,11 +20,17 @@ class _RegistrationPageState extends State<RegistrationPage> {
       TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  bool _isEmailValid(String email) {
+    final RegExp emailRegex =
+        RegExp(r"^[a-zA-Z0-9]+[a-zA-Z0-9._%+-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
+    return emailRegex.hasMatch(email);
+  }
+
   void _scrollToFocusedInput(BuildContext context, FocusNode focusNode) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (focusNode.hasFocus) {
         _scrollController.animateTo(
-          focusNode.offset.dy - 100.0, // Adjust the offset as needed
+          focusNode.offset.dy - 100.0,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
@@ -36,7 +42,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFF202123), // Dark background color
+      backgroundColor: const Color(0xFF202123),
       body: SafeArea(
         child: SingleChildScrollView(
           controller: _scrollController,
@@ -62,25 +68,24 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   child: Text(
                     "Register",
                     style: TextStyle(
-                      color: Colors.white, // White text color
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 30,
                     ),
                   ),
                 ),
-                const SizedBox(height: 5), // Slight space between texts
+                const SizedBox(height: 5),
                 const Padding(
                   padding: EdgeInsets.only(left: 35.0),
                   child: Text(
                     'Create an account to continue',
                     style: TextStyle(
-                      color: Colors.white70, // Slightly faded white
+                      color: Colors.white70,
                       fontSize: 16,
                     ),
                   ),
                 ),
-                const SizedBox(
-                    height: 20), // Space between text and text fields
+                const SizedBox(height: 20),
                 MyTextField(
                   controller: nameController,
                   hintText: "Name",
@@ -128,11 +133,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   onFocusChange: (focusNode) =>
                       _scrollToFocusedInput(context, focusNode),
                 ),
-                const SizedBox(height: 30), // Increased space after text fields
+                const SizedBox(height: 30),
                 MyButton(
                   buttonText: 'Register',
                   onPressedAsync: () async {
-                    // Validate password and confirm password
+                    if (!_isEmailValid(emailController.text)) {
+                      Fluttertoast.showToast(
+                        msg: "Please enter a valid email address.",
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.BOTTOM,
+                      );
+                      return;
+                    }
+
                     if (passwordController.text !=
                         confirmPasswordController.text) {
                       Fluttertoast.showToast(
@@ -144,11 +157,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     }
 
                     try {
-                      // Register the user with Firebase Auth
                       UserCredential userCredential = await FirebaseAuth
                           .instance
                           .createUserWithEmailAndPassword(
-                        email: emailController.text,
+                        email: emailController.text.trim(),
                         password: passwordController.text,
                       );
 
@@ -158,11 +170,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         gravity: ToastGravity.BOTTOM,
                       );
 
-                      // Navigate to the ChatScreen
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => ModelSelectionScreen()),
+                            builder: (context) => const ModelSelectionScreen()),
                       );
                     } on FirebaseAuthException catch (e) {
                       String errorMessage;
@@ -191,7 +202,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     }
                   },
                 ),
-                const SizedBox(height: 20), // Adjusted spacing after the button
+                const SizedBox(height: 20),
               ],
             ),
           ),

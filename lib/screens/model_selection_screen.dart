@@ -10,27 +10,32 @@ class ModelSelectionScreen extends StatelessWidget {
       {
         "name": "Gemma",
         "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
-        "icon": Icons.ac_unit
+        "icon": Icons.ac_unit,
+        "isRagModel": false
       },
       {
         "name": "Sarvam",
         "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
-        "icon": Icons.cloud
+        "icon": Icons.cloud,
+        "isRagModel": false
       },
       {
         "name": "Llama",
         "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
-        "icon": Icons.emoji_nature
+        "icon": Icons.emoji_nature,
+        "isRagModel": false
       },
       {
         "name": "Rag",
         "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
-        "icon": Icons.terrain
+        "icon": Icons.terrain,
+        "isRagModel": true // Mark as RAG model
       },
       {
         "name": "Agriculture",
         "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
-        "icon": Icons.grass
+        "icon": Icons.grass,
+        "isRagModel": false
       },
     ];
 
@@ -45,25 +50,19 @@ class ModelSelectionScreen extends StatelessWidget {
           alignment: WrapAlignment.center,
           spacing: 16.0,
           runSpacing: 16.0,
-          children: models.asMap().entries.map((entry) {
-            final index = entry.key;
-            final model = entry.value;
-
-            // Check if this is the last item (Agriculture)
-            final bool isLastItem = index == models.length - 1;
-
+          children: models.map((model) {
             return Container(
-              width: isLastItem
-                  ? MediaQuery.of(context).size.width *
-                      0.6 // Center Agriculture
-                  : MediaQuery.of(context).size.width * 0.4, // Normal icons
+              width: MediaQuery.of(context).size.width * 0.4,
               child: GestureDetector(
                 onTap: () {
-                  // Navigate to the ChatScreen and pass the selected server URL
+                  // Pass the selected server URL and isRagModel flag to ChatScreen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ChatScreen(serverUrl: model['url']),
+                      builder: (context) => ChatScreen(
+                        serverUrl: model['url'],
+                        isRagModel: model['isRagModel'],
+                      ),
                     ),
                   );
                 },

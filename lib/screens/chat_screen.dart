@@ -3,12 +3,15 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
 import 'model_selection_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String serverUrl;
+  final bool isRagModel;
 
-  const ChatScreen({Key? key, required this.serverUrl}) : super(key: key);
+  const ChatScreen({Key? key, required this.serverUrl, this.isRagModel = false})
+      : super(key: key);
 
   @override
   _ChatScreenState createState() => _ChatScreenState();
@@ -16,9 +19,12 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, String>> _messages = [];
+  final List<Map<String, dynamic>> _messages = [];
   final List<Map<String, String>> _chatHistory = [];
   String? _currentChatTitle;
+  String? _attachedFileName;
+  String? _attachedFilePath;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -27,13 +33,21 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _sendMessage() async {
-    if (_controller.text.isEmpty) return;
+    if (_controller.text.isEmpty && _attachedFilePath == null) return;
 
     String userMessage = _controller.text;
 
     setState(() {
-      _messages.add({"role": "user", "message": userMessage});
+      _messages.add({
+        "role": "user",
+        "message": userMessage,
+        "fileName": _attachedFileName,
+        "filePath": _attachedFilePath,
+      });
+
       _controller.clear();
+      _attachedFileName = null;
+      _attachedFilePath = null;
     });
 
     if (_currentChatTitle == "New Chat") {
@@ -48,14 +62,18 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
-    var response = await http.post(
-      Uri.parse(widget.serverUrl),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"prompt": userMessage}),
-    );
+    var request = http.MultipartRequest('POST', Uri.parse(widget.serverUrl));
+    if (_attachedFilePath != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('file', _attachedFilePath!),
+      );
+    }
+    request.fields['prompt'] = userMessage;
 
+    var response = await request.send();
     if (response.statusCode == 200) {
-      var data = jsonDecode(response.body);
+      var responseData = await response.stream.bytesToString();
+      var data = jsonDecode(responseData);
       setState(() {
         _messages.add({"role": "bot", "message": data['response']});
       });
@@ -69,6 +87,28 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _attachFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _attachedFileName = result.files.single.name;
+        _attachedFilePath = result.files.single.path;
+        _isUploading = true;
+      });
+
+      // Simulate a delay for file upload
+      await Future.delayed(const Duration(seconds: 2));
+
+      setState(() {
+        _isUploading = false;
+      });
+    }
+  }
+
   void _saveChatToHistory() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -77,16 +117,22 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     if (_messages.isNotEmpty && _currentChatTitle != null) {
-      // Prevent duplicate entries in the local chat history
-      if (_chatHistory.any((chat) => chat['title'] == _currentChatTitle)) {
-        print("Chat already exists in history. Skipping duplicate.");
-      } else {
-        _chatHistory.add({
-          "title": _currentChatTitle!,
-          "messages": jsonEncode(_messages),
-        });
-      }
+      // Always add to local history
+      setState(() {
+        if (!_chatHistory.any((chat) => chat['title'] == _currentChatTitle)) {
+          _chatHistory.add({
+            "title": _currentChatTitle!,
+            "messages": jsonEncode(_messages),
+          });
+        } else {
+          // Update the existing chat in local history
+          int existingIndex = _chatHistory
+              .indexWhere((chat) => chat['title'] == _currentChatTitle);
+          _chatHistory[existingIndex]['messages'] = jsonEncode(_messages);
+        }
+      });
 
+      // Save to Firestore
       try {
         await FirebaseFirestore.instance
             .collection('users')
@@ -98,10 +144,6 @@ class _ChatScreenState extends State<ChatScreen> {
       } catch (e) {
         print("Failed to save chat history: $e");
       }
-
-      _messages.clear();
-      _currentChatTitle = null;
-      setState(() {});
     }
   }
 
@@ -135,12 +177,15 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _startNewChat() {
+    // Save the current chat before starting a new one
     _saveChatToHistory();
 
     setState(() {
+      // Clear messages and set new chat title
       _messages.clear();
       _currentChatTitle = "New Chat";
 
+      // Add "New Chat" to the chat history only if it doesn't exist
       if (!_chatHistory.any((chat) => chat['title'] == _currentChatTitle)) {
         _chatHistory.add({
           "title": _currentChatTitle!,
@@ -158,16 +203,35 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     try {
+      String deletedChatTitle = _chatHistory[index]['title']!;
+
+      // Delete the chat from Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('chats')
-          .doc(_chatHistory[index]['title']!)
+          .doc(deletedChatTitle)
           .delete();
 
       setState(() {
         _chatHistory.removeAt(index);
+
+        // If the deleted chat is the currently open chat
+        if (deletedChatTitle == _currentChatTitle) {
+          // Clear the current chat and create a new one
+          _messages.clear();
+          _currentChatTitle = "New Chat";
+
+          // Add "New Chat" to the chat history if it doesn't already exist
+          if (!_chatHistory.any((chat) => chat['title'] == _currentChatTitle)) {
+            _chatHistory.add({
+              "title": _currentChatTitle!,
+              "messages": jsonEncode([]),
+            });
+          }
+        }
       });
+
       print("Chat deleted from Firestore.");
     } catch (e) {
       print("Failed to delete chat: $e");
@@ -195,7 +259,60 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Widget _buildMessage(Map<String, String> message) {
+  Widget _buildMessageInput() {
+    return Row(
+      children: [
+        if (widget.isRagModel)
+          IconButton(
+            icon: const Icon(Icons.attach_file, color: Colors.white),
+            onPressed: _attachFile,
+          ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_attachedFileName != null)
+                Row(
+                  children: [
+                    const Icon(Icons.insert_drive_file, color: Colors.white),
+                    const SizedBox(width: 8.0),
+                    Text(
+                      _attachedFileName!,
+                      style: const TextStyle(color: Colors.white),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              if (_isUploading)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.0,
+                    color: Colors.white,
+                  ),
+                ),
+              TextField(
+                controller: _controller,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Enter your message...',
+                  hintStyle: TextStyle(color: Colors.white54),
+                  border: InputBorder.none,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.send, color: Color(0xFF00A67E)),
+          onPressed: _sendMessage,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMessage(Map<String, dynamic> message) {
     bool isUserMessage = message['role'] == 'user';
     return Align(
       alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
@@ -207,9 +324,25 @@ class _ChatScreenState extends State<ChatScreen> {
               isUserMessage ? const Color(0xFF343541) : const Color(0xFF444654),
           borderRadius: BorderRadius.circular(20.0),
         ),
-        child: Text(
-          message['message']!,
-          style: const TextStyle(color: Colors.white, fontSize: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (message['fileName'] != null)
+              Row(
+                children: [
+                  const Icon(Icons.insert_drive_file, color: Colors.white),
+                  const SizedBox(width: 8.0),
+                  Text(
+                    message['fileName'],
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            Text(
+              message['message'] ?? '',
+              style: const TextStyle(color: Colors.white, fontSize: 16.0),
+            ),
+          ],
         ),
       ),
     );
@@ -249,7 +382,7 @@ class _ChatScreenState extends State<ChatScreen> {
               _messages.clear();
               _messages.addAll(
                 (jsonDecode(_chatHistory[index]['messages']!) as List<dynamic>)
-                    .map((e) => Map<String, String>.from(e))
+                    .map((e) => Map<String, dynamic>.from(e))
                     .toList(),
               );
               _currentChatTitle = _chatHistory[index]['title'];
@@ -346,25 +479,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'Enter your message...',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Color(0xFF00A67E)),
-                  onPressed: _sendMessage,
-                ),
-              ],
-            ),
+            child: _buildMessageInput(),
           ),
         ],
       ),

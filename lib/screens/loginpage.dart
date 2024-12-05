@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:punjabigpt/screens/registrationpage.dart'; // Import the RegistrationPage
 import 'package:punjabigpt/screens/forgotpassword.dart'; // Import the ForgotPasswordPage
-import 'model_selection_screen.dart'; // Assuming you have a ChatScreen widget
+import 'model_selection_screen.dart';
 
 class LoginPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
