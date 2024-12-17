@@ -9,31 +9,31 @@ class ModelSelectionScreen extends StatelessWidget {
     final List<Map<String, dynamic>> models = [
       {
         "name": "Gemma",
-        "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
+        "url": "https://f59f-34-135-214-133.ngrok-free.app/predict",
         "icon": Icons.ac_unit,
         "isRagModel": false
       },
       {
         "name": "Sarvam",
-        "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
+        "url": "https://a8a0-34-122-7-125.ngrok-free.app/predict",
         "icon": Icons.cloud,
         "isRagModel": false
       },
       {
         "name": "Llama",
-        "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
+        "url": "https://e029-34-122-88-67.ngrok-free.app/predict",
         "icon": Icons.emoji_nature,
         "isRagModel": false
       },
       {
         "name": "Rag",
-        "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
+        "url": "https://5c00-34-125-215-19.ngrok-free.app/predict/predict",
         "icon": Icons.terrain,
         "isRagModel": true // Mark as RAG model
       },
       {
         "name": "Agriculture",
-        "url": "https://5c00-34-125-215-19.ngrok-free.app/predict",
+        "url": "https://d306-34-123-110-33.ngrok-free.app/predict",
         "icon": Icons.grass,
         "isRagModel": false
       },

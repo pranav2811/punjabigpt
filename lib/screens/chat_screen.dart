@@ -38,11 +38,26 @@ class _ChatScreenState extends State<ChatScreen> {
 
     String userMessage = _controller.text;
 
+    // Add the user's message to the chat
+    setState(() {
+      _messages.add({"role": "user", "message": userMessage});
+    });
+
+    // Clear input field immediately
+    _controller.clear();
+
+    // Placeholder for bot response during streaming
+    Map<String, dynamic> botMessage = {"role": "bot", "message": ""};
+    setState(() {
+      _messages.add(botMessage);
+    });
+
     // Check if a file is attached
     bool isFileAttached = _attachedFilePath != null;
 
+    String responseText = ""; // To store final response
+
     if (isFileAttached) {
-      // Use multipart/form-data when a file is attached
       var request = http.MultipartRequest('POST', Uri.parse(widget.serverUrl));
       request.fields['prompt'] = userMessage;
 
@@ -56,18 +71,15 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       var response = await request.send();
-
       if (response.statusCode == 200) {
         var responseData = await response.stream.bytesToString();
         var data = jsonDecode(responseData);
-        setState(() {
-          _messages.add({"role": "bot", "message": data['response']});
-        });
+        responseText = data['response'];
       } else {
         _handleError(response.statusCode, response.reasonPhrase);
+        return;
       }
     } else {
-      // Use JSON for text-only requests
       final payload = jsonEncode({"prompt": userMessage});
 
       final response = await http.post(
@@ -78,17 +90,27 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        setState(() {
-          _messages.add({"role": "bot", "message": data['response']});
-        });
+        responseText = data['response'];
       } else {
         _handleError(response.statusCode, response.reasonPhrase);
+        return;
       }
     }
 
-    _controller.clear();
-    _attachedFileName = null;
-    _attachedFilePath = null;
+    // Simulate streaming output character by character
+    for (int i = 0; i < responseText.length; i++) {
+      await Future.delayed(
+          const Duration(milliseconds: 20)); // Adjust speed here
+      setState(() {
+        botMessage["message"] = responseText.substring(0, i + 1);
+      });
+    }
+
+    // Reset attached file after sending
+    setState(() {
+      _attachedFileName = null;
+      _attachedFilePath = null;
+    });
   }
 
   void _handleError(int statusCode, String? reason) {
@@ -193,18 +215,47 @@ class _ChatScreenState extends State<ChatScreen> {
     // Save the current chat before starting a new one
     _saveChatToHistory();
 
-    setState(() {
-      // Clear messages and set new chat title
-      _messages.clear();
-      _currentChatTitle = "New Chat";
+    String newChatTitle;
 
-      // Add "New Chat" to the chat history only if it doesn't exist
-      if (!_chatHistory.any((chat) => chat['title'] == _currentChatTitle)) {
-        _chatHistory.add({
-          "title": _currentChatTitle!,
-          "messages": jsonEncode([]),
-        });
+    // Check for input field OR messages in the current chat
+    if (_messages.isNotEmpty) {
+      // If there are messages, use the first few words of the first user message
+      final firstUserMessage = _messages.firstWhere(
+        (msg) => msg['role'] == 'user',
+        orElse: () => {"message": ""},
+      )['message'];
+
+      if (firstUserMessage != null && firstUserMessage.trim().isNotEmpty) {
+        List<String> words = firstUserMessage.trim().split(' ');
+        newChatTitle = words.length > 5
+            ? words.take(5).join(' ') + "..."
+            : words.join(' ');
+      } else {
+        newChatTitle = "New Chat ${_chatHistory.length + 1}";
       }
+    } else if (_controller.text.trim().isNotEmpty) {
+      // Use input from the text controller if present
+      List<String> words = _controller.text.trim().split(' ');
+      newChatTitle =
+          words.length > 5 ? words.take(5).join(' ') + "..." : words.join(' ');
+    } else {
+      // Fallback to default numbering
+      newChatTitle = "New Chat ${_chatHistory.length + 1}";
+    }
+
+    setState(() {
+      // Clear messages and input field
+      _messages.clear();
+      _controller.clear();
+
+      // Set the current chat title
+      _currentChatTitle = newChatTitle;
+
+      // Add the new chat to the chat history
+      _chatHistory.add({
+        "title": _currentChatTitle!,
+        "messages": jsonEncode([]),
+      });
     });
   }
 
