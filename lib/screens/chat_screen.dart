@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'model_selection_screen.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ChatScreen extends StatefulWidget {
   final String serverUrl;
@@ -37,54 +38,66 @@ class _ChatScreenState extends State<ChatScreen> {
 
     String userMessage = _controller.text;
 
+    // Check if a file is attached
+    bool isFileAttached = _attachedFilePath != null;
+
+    if (isFileAttached) {
+      // Use multipart/form-data when a file is attached
+      var request = http.MultipartRequest('POST', Uri.parse(widget.serverUrl));
+      request.fields['prompt'] = userMessage;
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          _attachedFilePath!,
+          contentType:
+              MediaType('image', 'jpeg'), // Adjust content type as needed
+        ),
+      );
+
+      var response = await request.send();
+
+      if (response.statusCode == 200) {
+        var responseData = await response.stream.bytesToString();
+        var data = jsonDecode(responseData);
+        setState(() {
+          _messages.add({"role": "bot", "message": data['response']});
+        });
+      } else {
+        _handleError(response.statusCode, response.reasonPhrase);
+      }
+    } else {
+      // Use JSON for text-only requests
+      final payload = jsonEncode({"prompt": userMessage});
+
+      final response = await http.post(
+        Uri.parse(widget.serverUrl),
+        headers: {"Content-Type": "application/json"},
+        body: payload,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _messages.add({"role": "bot", "message": data['response']});
+        });
+      } else {
+        _handleError(response.statusCode, response.reasonPhrase);
+      }
+    }
+
+    _controller.clear();
+    _attachedFileName = null;
+    _attachedFilePath = null;
+  }
+
+  void _handleError(int statusCode, String? reason) {
     setState(() {
       _messages.add({
-        "role": "user",
-        "message": userMessage,
-        "fileName": _attachedFileName,
-        "filePath": _attachedFilePath,
+        "role": "bot",
+        "message": "Error: $statusCode ${reason ?? 'Unknown error'}"
       });
-
-      _controller.clear();
-      _attachedFileName = null;
-      _attachedFilePath = null;
     });
-
-    if (_currentChatTitle == "New Chat") {
-      setState(() {
-        _currentChatTitle = _getFirstFiveWords(userMessage);
-
-        int chatIndex =
-            _chatHistory.indexWhere((chat) => chat['title'] == "New Chat");
-        if (chatIndex != -1) {
-          _chatHistory[chatIndex]['title'] = _currentChatTitle!;
-        }
-      });
-    }
-
-    var request = http.MultipartRequest('POST', Uri.parse(widget.serverUrl));
-    if (_attachedFilePath != null) {
-      request.files.add(
-        await http.MultipartFile.fromPath('file', _attachedFilePath!),
-      );
-    }
-    request.fields['prompt'] = userMessage;
-
-    var response = await request.send();
-    if (response.statusCode == 200) {
-      var responseData = await response.stream.bytesToString();
-      var data = jsonDecode(responseData);
-      setState(() {
-        _messages.add({"role": "bot", "message": data['response']});
-      });
-    } else {
-      setState(() {
-        _messages.add({
-          "role": "bot",
-          "message": "Error: Could not connect to the server."
-        });
-      });
-    }
   }
 
   void _attachFile() async {
